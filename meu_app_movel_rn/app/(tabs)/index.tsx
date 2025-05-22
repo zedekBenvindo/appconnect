@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, FlatList, ActivityIndicator, Platform } from 'react-native';
 
 // !!! AJUSTE SEU IP LOCAL DO COMPUTADOR AQUI !!!
-const BACKEND_URL = 'http://<SEU_IP_LOCAL_DO_COMPUTADOR>:5000';
+const BACKEND_URL = 'http://192.168.1.15:5000';
 
 interface Device {
   id: number;
