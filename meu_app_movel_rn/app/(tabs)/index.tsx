@@ -1,75 +1,93 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+// Conteúdo INICIAL SIMPLES para App.js/App.tsx ou app/index.tsx
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, FlatList, ActivityIndicator, Platform } from 'react-native';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+// !!! AJUSTE SEU IP LOCAL DO COMPUTADOR AQUI !!!
+const BACKEND_URL = 'http://<SEU_IP_LOCAL_DO_COMPUTADOR>:5000';
 
-export default function HomeScreen() {
+interface Device {
+  id: number;
+  name: string;
+  status: string;
+}
+
+export default function App() { // Ou o nome do seu componente principal
+  const [isLoading, setIsLoading] = useState(true);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchDummyDevices = async () => {
+      setIsLoading(true);
+      setError(null);
+      console.log(`Frontend: Buscando de: ${BACKEND_URL}/api/devices`);
+      try {
+        const response = await fetch(`${BACKEND_URL}/api/devices`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data: Device[] = await response.json();
+        console.log("Frontend: Recebidos (dummy):", data);
+        setDevices(data);
+      } catch (e: any) {
+        console.error("Frontend: Erro buscar (dummy):", e);
+        setError(`Falha ao carregar: ${e.message || 'Erro desconhecido'}`);
+        setDevices([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchDummyDevices();
+  }, []);
+
+  if (isLoading) {
+    return <View style={styles.center}><ActivityIndicator size="large" /></View>;
+  }
+  if (error) {
+    return <View style={styles.center}><Text style={styles.errorText}>{error}</Text></View>;
+  }
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <View style={styles.container}>
+      <Text style={styles.title}>Lista de Dispositivos (Dummy)</Text>
+      <FlatList
+        data={devices}
+        keyExtractor={item => item.id.toString()}
+        renderItem={({ item }) => (
+          <View style={styles.item}>
+            <Text>{item.name} - Status: {item.status}</Text>
+          </View>
+        )}
+        ListEmptyComponent={<Text>Nenhum dispositivo encontrado.</Text>}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  container: {
+    flex: 1,
+    paddingTop: Platform.OS === 'android' ? 60 : 80, // Aumentado o paddingTop
+    paddingHorizontal: 20,
+    backgroundColor: '#fff',
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  title: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  item: {
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
+  errorText: {
+    color: 'red',
+  }
 });
