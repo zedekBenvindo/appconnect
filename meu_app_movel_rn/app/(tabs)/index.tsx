@@ -1,93 +1,25 @@
-// Conteúdo INICIAL SIMPLES para App.js/App.tsx ou app/index.tsx
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, FlatList, ActivityIndicator, Platform } from 'react-native';
+// Conteúdo INICIAL para: meu_app_movel_rn/app/(tabs)/index.tsx
+import { View, Text, Button, StyleSheet, Platform } from 'react-native';
+import React from 'react';
+import { useAuth } from '../services/AuthContext'; // Ajuste para subir um nível e depois entrar em services
+import { Link } from 'expo-router'; // Se quiser link para outras partes
 
-// !!! AJUSTE SEU IP LOCAL DO COMPUTADOR AQUI !!!
-const BACKEND_URL = 'http://192.168.1.15:5000';
-
-interface Device {
-  id: number;
-  name: string;
-  status: string;
-}
-
-export default function App() { // Ou o nome do seu componente principal
-  const [isLoading, setIsLoading] = useState(true);
-  const [devices, setDevices] = useState<Device[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchDummyDevices = async () => {
-      setIsLoading(true);
-      setError(null);
-      console.log(`Frontend: Buscando de: ${BACKEND_URL}/api/devices`);
-      try {
-        const response = await fetch(`${BACKEND_URL}/api/devices`);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data: Device[] = await response.json();
-        console.log("Frontend: Recebidos (dummy):", data);
-        setDevices(data);
-      } catch (e: any) {
-        console.error("Frontend: Erro buscar (dummy):", e);
-        setError(`Falha ao carregar: ${e.message || 'Erro desconhecido'}`);
-        setDevices([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchDummyDevices();
-  }, []);
-
-  if (isLoading) {
-    return <View style={styles.center}><ActivityIndicator size="large" /></View>;
-  }
-  if (error) {
-    return <View style={styles.center}><Text style={styles.errorText}>{error}</Text></View>;
-  }
+export default function MainAppScreenPlaceholder() {
+  const { signOut, currentUser } = useAuth();
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Lista de Dispositivos (Dummy)</Text>
-      <FlatList
-        data={devices}
-        keyExtractor={item => item.id.toString()}
-        renderItem={({ item }) => (
-          <View style={styles.item}>
-            <Text>{item.name} - Status: {item.status}</Text>
-          </View>
-        )}
-        ListEmptyComponent={<Text>Nenhum dispositivo encontrado.</Text>}
-      />
+      <Text style={styles.title}>App Principal</Text>
+      {currentUser && <Text style={styles.userInfo}>Logado como: {currentUser.username}</Text>}
+      <Text style={styles.content}>Bem-vindo! A lista de dispositivos aparecerá aqui em breve.</Text>
+      <Button title="Sair (Logout)" onPress={signOut} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: Platform.OS === 'android' ? 60 : 80, // Aumentado o paddingTop
-    paddingHorizontal: 20,
-    backgroundColor: '#fff',
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  item: {
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  errorText: {
-    color: 'red',
-  }
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, paddingTop: Platform.OS === 'android' ? 40 : 60, backgroundColor: '#fff' },
+  title: { fontSize: 22, fontWeight: 'bold', marginBottom: 20 },
+  userInfo: { fontSize: 16, marginBottom: 10, color: 'gray' },
+  content: { fontSize: 16, marginBottom: 20, textAlign: 'center' }
 });

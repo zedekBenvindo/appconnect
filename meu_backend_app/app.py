@@ -1,4 +1,4 @@
-# Conteúdo COMPLETO para: app.py
+# Conteúdo COMPLETO e ATUALIZADO para: app.py
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
@@ -13,7 +13,7 @@ import time
 basedir = os.path.abspath(os.path.dirname(__file__))
 app = Flask(__name__)
 
-app.config['SECRET_KEY'] = 'sua_chave_secreta_super_segura_e_dificil_123!@#' # MUDE ISSO EM PRODUÇÃO!
+app.config['SECRET_KEY'] = 'sua_chave_secreta_super_segura_e_dificil_987$#@' # MUDE ISSO EM PRODUÇÃO!
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///meu_app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -29,7 +29,6 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
     devices = db.relationship('Device', backref='owner', lazy=True, cascade="all, delete-orphan")
-
     def __repr__(self): return f'<User {self.username}>'
 
 class Device(db.Model):
@@ -37,9 +36,10 @@ class Device(db.Model):
     name = db.Column(db.String(80), nullable=False)
     status = db.Column(db.String(10), nullable=False, default='OFF')
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-
     def __repr__(self): return f'<Device {self.id}: {self.name} ({self.status}) OwnerID: {self.user_id}>'
 
+# Este with app.app_context() garante que as tabelas são criadas no contexto correto.
+# Apague o arquivo meu_app.db se você alterar a estrutura dos modelos!
 with app.app_context():
     print("INFO: Backend: Verificando e criando tabelas do BD (User e Device)...")
     db.create_all()
@@ -74,7 +74,7 @@ def on_message_listener(client, userdata, msg):
             try:
                 device_id = int(topic_parts[1]); new_status = msg.payload.decode("utf-8").upper()
                 print(f"\n[MQTT Listener Backend] Status Recebido! T: {msg.topic}, S: '{new_status}'")
-                with app.app_context():
+                with app.app_context(): # Precisa do contexto do app para operações de DB em threads
                     device = Device.query.get(device_id)
                     if device:
                         if device.status != new_status and new_status in ["ON", "OFF"]: device.status = new_status; db.session.commit(); print(f"[MQTT Listener Backend] Status ID {device_id} -> '{new_status}' no DB.")
@@ -85,11 +85,12 @@ def on_message_listener(client, userdata, msg):
             except Exception as e_db: print(f"[MQTT Listener Backend] ERRO DB ID {topic_parts[1]}: {e_db}"); db.session.rollback()
         else: print(f"[MQTT Listener Backend] Msg em tópico inesperado: {msg.topic}")
     except Exception as e: print(f"[MQTT Listener Backend] Erro geral msg status: {e}")
+
 def mqtt_listener_thread_func():
     client_id = f"flask_listener_{os.getpid()}_{time.time()}"; listener_client = paho_mqtt.Client(paho_mqtt.CallbackAPIVersion.VERSION1, client_id=client_id)
     listener_client.on_connect = on_connect_listener; listener_client.on_subscribe = on_subscribe_listener; listener_client.on_message = on_message_listener
     print("INFO: Backend: Iniciando thread listener MQTT...");
-    while True:
+    while True: # Loop para tentar reconectar
         try: print("[MQTT Listener Thread] Tentando conectar..."); listener_client.connect(MQTT_BROKER_ADDRESS, MQTT_BROKER_PORT, 60); listener_client.loop_forever()
         except Exception as e: print(f"[MQTT Listener Thread] Erro: {e}. Reconectando em 10s..."); time.sleep(10)
 
