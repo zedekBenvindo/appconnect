@@ -2,7 +2,7 @@
 import { Stack } from 'expo-router';
 import React from 'react';
 
-export default function AuthFlowLayout() { // Nome alterado para clareza
+export default function AuthFlowLayout() {
   return (
     <Stack>
       <Stack.Screen name="login" options={{ headerShown: false }} />

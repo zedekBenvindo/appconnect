@@ -1,7 +1,7 @@
 // Conteúdo para: meu_app_movel_rn/app/_layout.tsx
 import React, { useEffect } from 'react';
 import { SplashScreen, Stack, router } from 'expo-router';
-import { AuthProvider, useAuth } from './services/AuthContext'; // Caminho para o AuthContext
+import { AuthProvider, useAuth } from '../contexts/AuthContext'; // <<< CAMINHO ATUALIZADO
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 
 SplashScreen.preventAutoHideAsync();
@@ -25,10 +25,6 @@ function RootNavigationDecider() {
   if (isLoadingToken) {
     return <View style={styles.loadingContainer}><ActivityIndicator size="large" color="#0000ff" /></View>;
   }
-
-  // O Expo Router renderizará o grupo (auth) ou (tabs) baseado nos redirecionamentos acima
-  // Este Stack é para configurar a apresentação desses grupos, se necessário.
-  // Com headerShown: false, ele apenas permite que o conteúdo do grupo seja exibido.
   return (
       <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(auth)" />
@@ -44,7 +40,6 @@ export default function RootLayout() {
     </AuthProvider>
   );
 }
-
 const styles = StyleSheet.create({
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' }
 });

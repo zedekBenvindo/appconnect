@@ -1,7 +1,7 @@
 // Conteúdo para: meu_app_movel_rn/app/(auth)/login.tsx
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, ActivityIndicator, Alert, TouchableOpacity, Platform } from 'react-native';
-import { useAuth } from '../services/AuthContext'; // Ajuste para subir um nível e depois entrar em services
+import { View, Text, TextInput, Button, StyleSheet, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
+import { useAuth } from '../../contexts/AuthContext'; // <<< CAMINHO ATUALIZADO
 import { Link } from 'expo-router';
 
 export default function LoginScreen() {
@@ -10,11 +10,8 @@ export default function LoginScreen() {
   const { signIn, isLoadingToken } = useAuth();
 
   const handleLogin = async () => {
-    if (!username.trim() || !password.trim()) { Alert.alert("Login", "Usuário e senha são obrigatórios."); return; }
-    const success = await signIn(username, password);
-    // A navegação para (tabs) é tratada pelo RootNavigationDecider em app/_layout.tsx
-    if (success) { console.log("LoginScreen: signIn retornou sucesso."); } 
-    else { console.log("LoginScreen: signIn retornou falha."); }
+    if (!username.trim() || !password.trim()) { Alert.alert("Login", "Usuário e senha obrigatórios."); return; }
+    await signIn(username, password);
   };
 
   return (
