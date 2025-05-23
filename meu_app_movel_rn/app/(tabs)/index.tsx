@@ -1,14 +1,21 @@
-// Conteúdo CORRIGIDO para: meu_app_movel_rn/app/(tabs)/index.tsx
+// Conteúdo ATUALIZADO para: meu_app_movel_rn/app/(tabs)/index.tsx
+// Inclui botões ON/OFF com estilo dinâmico baseado no status e cores da logo (placeholders)
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet, Text, View, FlatList, ActivityIndicator,
   TextInput, Button, Alert, Keyboard, TouchableOpacity,
   Image, Platform, SafeAreaView
 } from 'react-native';
-// Importa o hook de autenticação e a BACKEND_URL do nosso AuthContext
-import { useAuth, BACKEND_URL } from '../../contexts/AuthContext'; // Ajuste este caminho se necessário
+import { useAuth, BACKEND_URL } from '../../contexts/AuthContext'; // Importa BACKEND_URL do AuthContext
 
-// Ajuste o caminho da logo. De app/(tabs)/index.tsx para assets na raiz é ../../
+// !!!!! AJUSTE AS CORES DA SUA LOGO AQUI !!!!!
+const LOGO_PRIMARY_COLOR = '#0098FF'; // Exemplo: Verde (para ON ou cor principal da logo)
+const LOGO_ACCENT_COLOR = '#DD00B3';  // Exemplo: Laranja (para OFF ou cor secundária da logo)
+const INACTIVE_BUTTON_COLOR = '#D3D3D3'; // Cinza claro para botões inativos
+const INACTIVE_BUTTON_BORDER_COLOR = '#B0B0B0';
+// !!!!! FIM DO AJUSTE DE CORES !!!!!
+
 const logoPath = '../../assets/images/logo.png'; 
 
 interface Device { id: number; name: string; status: string; }
@@ -22,74 +29,35 @@ export default function DeviceControlScreen() {
   const { userToken, currentUser, signOut } = useAuth();
 
   const apiFetch = useCallback(async (endpoint: string, options?: RequestInit) => {
-    if (!userToken) {
-      setError("Não autenticado. Por favor, faça login novamente.");
-      // signOut(); // O _layout raiz deve cuidar do redirecionamento se o token sumir
-      console.log("apiFetch (DeviceScreen): Token não disponível, abortando requisição.");
-      return null;
-    }
-    const defaultHeaders: HeadersInit = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${userToken}`,
-    };
-    console.log(`Frontend (DeviceScreen): apiFetch chamando: ${BACKEND_URL}${endpoint}`); // Log da URL completa
+    if (!userToken) { setError("Não autenticado."); /* await signOut(); */ return null; }
+    const defaultHeaders: HeadersInit = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}`};
+    console.log(`Frontend (DeviceScreen): apiFetch chamando: ${BACKEND_URL}${endpoint}`);
     try {
-      // !!!!! LINHA DO FETCH CORRIGIDA !!!!!
       const response = await fetch(`${BACKEND_URL}${endpoint}`, { ...options, headers: {...defaultHeaders, ...options?.headers} });
-      
-      if (response.status === 401) {
-          Alert.alert("Sessão Expirada", "Sua sessão expirou. Por favor, faça login novamente.");
-          await signOut();
-          return null;
-      }
-      if (!response.ok) {
-        let eM = `Erro HTTP: ${response.status}`;
-        try { const eD = await response.json(); eM = eD.message || eM; } catch (jE) { /* Ignora se corpo do erro não for JSON */ }
-        throw new Error(eM);
-      }
-      if (options?.method === 'DELETE' && (response.status === 200 || response.status === 204)) {
-         try { return await response.json(); } catch(e) { return { message: 'Excluído com sucesso' }; }
-      }
+      if (response.status === 401) { Alert.alert("Sessão Expirada", "Login novamente."); await signOut(); return null; }
+      if (!response.ok) { let eM = `Erro HTTP ${response.status}`; try {const eD = await response.json(); eM = eD.message || eM;} catch (jE) {} throw new Error(eM); }
+      if (options?.method === 'DELETE' && (response.status === 200 || response.status === 204)) { try { return await response.json(); } catch(e) { return { message: 'Excluído' }; }}
       return response.json();
-    } catch (e: any) {
-      console.error(`Frontend (DeviceScreen): Erro em ${options?.method || 'GET'} ${endpoint}:`, e);
-      setError(`Falha na operação: ${e.message || 'Erro de rede ou servidor'}`);
-      // Não re-throw e; para permitir que o finally do chamador execute sem ser um erro não tratado
-      // throw e; 
-      return null; // Indica falha
-    }
-  }, [userToken, signOut]); // BACKEND_URL é constante importada, não precisa ser dep aqui
+    } catch (e: any) { console.error(`Frontend (DeviceScreen): Erro em ${options?.method || 'GET'} ${endpoint}:`, e); setError(`Falha: ${e.message || 'Erro rede/servidor'}`); throw e;}
+  }, [userToken, signOut]); // BACKEND_URL agora vem do import
 
   const fetchDevices = useCallback(async () => {
     setError(null);
-    // console.log(`DeviceScreen: Buscando de: ${BACKEND_URL}/api/devices`); // Log já está em apiFetch
     try {
       const data: Device[] | null = await apiFetch('/api/devices');
-      if (data) {
-        console.log("DeviceScreen: Dispositivos Recebidos:", data);
-        setDevices(data);
-        setError(null);
-      }
-    } catch (e: any) { console.log("DeviceScreen: Erro no fetchDevices (já tratado por apiFetch)"); }
+      if (data) { console.log("DeviceScreen: Dispositivos Recebidos:", data); setDevices(data); setError(null); }
+    } catch (e: any) { /* já tratado */ }
   }, [apiFetch]);
 
   useEffect(() => {
     if (userToken) {
         const loadInitialDevices = async () => {
             console.log("DeviceScreen: useEffect carga inicial com token...");
-            setIsLoading(true);
-            await fetchDevices();
-            setIsLoading(false);
+            setIsLoading(true); await fetchDevices(); setIsLoading(false);
             console.log("DeviceScreen: useEffect carga inicial OK.");
         };
         loadInitialDevices();
-    } else {
-        setDevices([]);
-        setIsLoading(false);
-        // Se não há token, o _layout.tsx raiz deve redirecionar para login.
-        // Mas podemos mostrar uma mensagem aqui também se o usuário de alguma forma chegar nesta tela.
-        setError("Você não está logado. Por favor, faça login.");
-    }
+    } else { setDevices([]); setIsLoading(false); setError("Faça login para ver dispositivos."); }
   }, [userToken, fetchDevices]);
 
   const handleAddDevice = async () => {
@@ -99,8 +67,7 @@ export default function DeviceControlScreen() {
     try {
       const result: Device | null = await apiFetch('/api/add_device', { method: 'POST', body: JSON.stringify({ name: nameToAdd }) });
       if (result) { Alert.alert('Sucesso', `Dispositivo "${result.name}" adicionado!`); await fetchDevices(); }
-    } catch (e: any) { /* Erro já tratado por apiFetch */ }
-    finally { setIsLoading(false); }
+    } catch (e: any) { /* já tratado */ } finally { setIsLoading(false); }
   };
 
   type ControlAction = 'ON' | 'OFF';
@@ -112,7 +79,7 @@ export default function DeviceControlScreen() {
         Alert.alert('Comando Enviado', `Status: ${result.status}`);
         setDevices(prevDevices => prevDevices.map(d => d.id === id ? { ...d, status: result.status, name: result.name } : d ));
       } else if (result) { Alert.alert('Comando Enviado', (result as {message:string}).message || `Comando ${action} enviado.`); setTimeout(() => fetchDevices(), 300);}
-    } catch (e: any) { /* Erro já tratado por apiFetch */ }
+    } catch (e: any) { /* já tratado */ }
   };
 
   const handleDeleteDevice = (id: number) => {
@@ -122,50 +89,83 @@ export default function DeviceControlScreen() {
             console.log(`DeviceScreen: Delete ID: ${id}`); setIsLoading(true); setError(null);
             try {
               const result = await apiFetch(`/api/device/${id}`, { method: 'DELETE' });
-              if(result) { console.log(`DeviceScreen: ID: ${id} excluído.`); Alert.alert('Sucesso', (result as {message: string}).message || 'Dispositivo excluído.'); await fetchDevices(); }
-            } catch (e: any) { /* Erro já tratado por apiFetch */ }
-            finally { setIsLoading(false); }
+              if(result) { console.log(`DeviceScreen: ID: ${id} excluído.`); Alert.alert('Sucesso', (result as {message: string}).message || 'Excluído.'); await fetchDevices(); }
+            } catch (e: any) { /* já tratado */ } finally { setIsLoading(false); }
           }, style: "destructive" }
       ], { cancelable: true } );
   };
 
-  const renderDeviceItem = ({ item }: { item: Device }) => (
-    <View style={styles.itemContainer}>
-      <View style={styles.itemInfo}><Text style={styles.itemText}>{`${item.name} (ID: ${item.id})`}</Text><Text style={styles.itemStatus}>Status: {item.status || 'N/A'}</Text></View>
-      <View style={styles.itemButtons}><TouchableOpacity style={[styles.controlButton, styles.buttonOn]} onPress={() => handleControlDevice(item.id, 'ON')}><Text style={styles.buttonText}>ON</Text></TouchableOpacity><TouchableOpacity style={[styles.controlButton, styles.buttonOff]} onPress={() => handleControlDevice(item.id, 'OFF')}><Text style={styles.buttonText}>OFF</Text></TouchableOpacity><Button title="Excluir" color="#ff5c5c" onPress={() => handleDeleteDevice(item.id)} /></View>
-    </View>
-  );
+  // --- Função para renderizar cada item da lista (COM BOTÕES DE CONTROLE ESTILIZADOS) ---
+  const renderDeviceItem = ({ item }: { item: Device }) => {
+    const isDeviceOn = item.status === 'ON';
+
+    return (
+      <View style={styles.itemContainer}>
+        <View style={styles.itemInfo}>
+          <Text style={styles.itemText}>{`${item.name} (ID: ${item.id})`}</Text>
+          <Text style={isDeviceOn ? styles.itemStatusOn : styles.itemStatusOff}>
+            Status: {item.status || 'N/A'}
+          </Text>
+        </View>
+        <View style={styles.itemButtons}>
+          <TouchableOpacity
+            style={[
+              styles.controlButton,
+              isDeviceOn ? styles.buttonOnActive : styles.buttonOnInactive,
+            ]}
+            onPress={() => handleControlDevice(item.id, 'ON')}
+            disabled={isDeviceOn}
+          >
+            <Text style={styles.buttonText}>ON</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.controlButton,
+              !isDeviceOn ? styles.buttonOffActive : styles.buttonOffInactive,
+            ]}
+            onPress={() => handleControlDevice(item.id, 'OFF')}
+            disabled={!isDeviceOn}
+          >
+            <Text style={styles.buttonText}>OFF</Text>
+          </TouchableOpacity>
+          <Button
+            title="Excluir"
+            color="#e74c3c" // Um vermelho um pouco diferente
+            onPress={() => handleDeleteDevice(item.id)}
+          />
+        </View>
+      </View>
+    );
+  };
 
   let actualLogoSource;
-  try { actualLogoSource = require(logoPath); } catch (error) { console.warn(`Logo não encontrada em '${logoPath}'. Verifique o caminho se este arquivo é app/(tabs)/index.tsx e a logo está em MEU_PROJETO/assets/images/logo.png.`); actualLogoSource = null; }
-
-  // O useEffect acima deve lidar com o estado de isLoading para a carga inicial
-  // Se userToken for null (ex: após logout), o _layout.tsx raiz deve redirecionar para login.
-  // Esta tela só deve ser renderizada se userToken existir.
-  if (!userToken && !isLoading) { // isLoading aqui se refere ao isLoading desta tela
-      return <View style={styles.center}><Text>Não autenticado. Redirecionando para login...</Text></View>;
-  }
-
+  try { actualLogoSource = require(logoPath); } catch (error) { console.warn(`Logo não encontrada em '${logoPath}'.`); actualLogoSource = null; }
 
   return (
     <SafeAreaView style={styles.safeArea}>
-        <View style={styles.container}>
-        {actualLogoSource && <Image source={actualLogoSource} style={styles.logo} onError={(e) => console.log("Erro ao carregar logo:", e.nativeEvent.error)} />}
+      <View style={styles.container}>
+        {actualLogoSource && <Image source={actualLogoSource} style={styles.logo} />}
         <Text style={styles.title}>Controle de Dispositivos</Text>
         <View style={styles.headerButtons}>
-            {currentUser && <Text style={styles.userInfo}>Usuário: {currentUser.username}</Text>}
-            <Button title="Sair" onPress={signOut} color="#888" />
+          {currentUser && <Text style={styles.userInfo}>Usuário: {currentUser.username}</Text>}
+          <Button title="Sair" onPress={signOut} color="#888" />
         </View>
-        <View style={styles.addDeviceContainer}><TextInput style={styles.input} placeholder="Nome do novo dispositivo" value={newDeviceName} onChangeText={setNewDeviceName} /><Button title="Adicionar Dispositivo" onPress={handleAddDevice} /></View>
+        <View style={styles.addDeviceContainer}>
+          <TextInput style={styles.input} placeholder="Nome do novo dispositivo" value={newDeviceName} onChangeText={setNewDeviceName} />
+          <Button title="Adicionar Dispositivo" onPress={handleAddDevice} />
+        </View>
         <Text style={styles.listTitle}>Dispositivos:</Text>
         {isLoading && <ActivityIndicator style={styles.loader} size="large" color="#0000ff" />}
         {error && !isLoading && <Text style={styles.errorText}>{error}</Text>}
-        {!isLoading && !error && (<FlatList style={styles.list} data={devices} keyExtractor={item => item.id.toString()} renderItem={renderDeviceItem} ListEmptyComponent={<Text>Nenhum dispositivo cadastrado.</Text>} />)}
-        </View>
+        {!isLoading && !error && (
+          <FlatList style={styles.list} data={devices} keyExtractor={item => item.id.toString()} renderItem={renderDeviceItem} ListEmptyComponent={<Text>Nenhum dispositivo cadastrado.</Text>} />
+        )}
+      </View>
     </SafeAreaView>
   );
 }
 
+// Estilos (COM NOVOS ESTILOS PARA BOTÕES ON/OFF E STATUS)
 const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: '#fff' },
     container: { flex: 1, paddingHorizontal: 15, },
@@ -178,13 +178,18 @@ const styles = StyleSheet.create({
     input: { height: 40, borderColor: 'gray', borderWidth: 1, marginBottom: 10, paddingHorizontal: 10, borderRadius: 5, fontSize: 16, },
     listTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 8, },
     list: { width: '100%', flex: 1, },
-    itemContainer: { backgroundColor: '#f0f0f0', paddingVertical: 8, paddingHorizontal: 12, marginBottom: 8, borderRadius: 5, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', },
+    itemContainer: { backgroundColor: '#f0f0f0', paddingVertical: 10, paddingHorizontal: 15, marginBottom: 8, borderRadius: 5, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', },
     itemInfo: { flex: 1, marginRight: 8, },
     itemText: { fontSize: 15, fontWeight: '500' },
-    itemStatus: { fontSize: 12, color: '#555'},
+    itemStatus: { fontSize: 12, color: '#555'}, // Estilo base para status
+    itemStatusOn: { fontSize: 12, color: LOGO_PRIMARY_COLOR, fontWeight: 'bold' }, // <<< NOVO
+    itemStatusOff: { fontSize: 12, color: LOGO_ACCENT_COLOR, fontWeight: 'bold' }, // <<< NOVO (ou um cinza)
     itemButtons: { flexDirection: 'row', alignItems: 'center', },
-    controlButton: { paddingVertical: 6, paddingHorizontal: 8, borderRadius: 4, marginHorizontal: 2, minWidth: 35, alignItems: 'center', justifyContent: 'center', },
-    buttonOn: { backgroundColor: '#4CAF50', }, buttonOff: { backgroundColor: '#f0ad4e', },
+    controlButton: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 5, marginHorizontal: 3, minWidth: 45, alignItems: 'center', justifyContent: 'center', borderWidth: 1, },
+    buttonOnActive: { backgroundColor: LOGO_PRIMARY_COLOR, borderColor: LOGO_PRIMARY_COLOR },     // <<< USA COR DA LOGO
+    buttonOnInactive: { backgroundColor: '#e9f5e9', borderColor: INACTIVE_BUTTON_BORDER_COLOR }, // <<< Um tom mais claro ou cinza
+    buttonOffActive: { backgroundColor: LOGO_ACCENT_COLOR, borderColor: LOGO_ACCENT_COLOR },   // <<< USA COR DA LOGO
+    buttonOffInactive: { backgroundColor: '#fdeee1', borderColor: INACTIVE_BUTTON_BORDER_COLOR },// <<< Um tom mais claro ou cinza
     buttonText: { color: 'white', fontWeight: 'bold', fontSize: 11 },
     errorText: { color: 'red', fontSize: 15, textAlign: 'center', marginTop: 15, },
     loader: { marginTop: 15, }
